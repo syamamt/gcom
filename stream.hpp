@@ -4,6 +4,7 @@
 #include "endpoint.hpp"
 #include <iostream>
 #include <map>
+#include <cinttypes>
 
 namespace gcom
 {

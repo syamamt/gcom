@@ -83,10 +83,12 @@ gcom::socket::~socket()
 //     itr->second.body.push_packets((unsigned char *)buf, len, payload_size);
 // }
 
-void gcom::socket::send_all(const void *buf, size_t len)
+void gcom::socket::async_send_all(const void *buf, size_t len)
 {
     int streamid; // 挿入するストリームID
     uint32_t remaining; // ストリームIDが示すストリームの空き容量
+
+    std::lock_guard<std::shared_mutex> lock(multicast_stream_mutex);
 
     // 空き容量が大きいストリームを選択する
     streamid = multicast_stream_map.begin()->first;
@@ -114,7 +116,7 @@ void gcom::socket::send_all(const void *buf, size_t len)
                         .push_packets((unsigned char *)buf, len, payload_size);
 }
 
-uint32_t gcom::socket::recv_from(void *buf, endpoint *from)
+uint32_t gcom::socket::async_recv_from(void *buf, endpoint *from)
 {
     uint32_t len;
     decltype(recv_stream_map)::iterator itr;
@@ -185,6 +187,9 @@ void gcom::socket::background()
 
     while (system_state.test())
     {
+        // 定期的に送信バッファ内のデータを送信する
+        transmit_ready_packets();
+
         nfds = epoll_wait(epollfd, events, max_epoll_events, epoll_wait_timeout);
         if (nfds > 0)
         {
@@ -200,16 +205,14 @@ void gcom::socket::background()
                 // 再送タイムアウト
             }
         }
-
-        // 定期的（最大epoll_wait_timeout間隔）で送信バッファ内のデータを送信する
-        transmit_ready_packets();
     }
-    std::cout << "fin background()state: " << system_state.test() << std::endl;
+
+    // バックグラウンドスレッド終了時、送信バッファ内の全データを送信する
+    transmit_ready_packets();
 }
 
 void gcom::socket::handle_arriving_packet()
 {
-    std::cout << "handle_arriving_packet" << std::endl;
     unsigned char payload[payload_size];
     header hdr;
 
@@ -249,7 +252,6 @@ void gcom::socket::handle_arriving_packet()
             }
             
             stream_itr->second.buff.insert_packet(payload, result_input_packet.first, hdr.seq, hdr.head, hdr.tail); 
-            std::cout << "insert" << std::endl;
         }
 
         recv_stream_cv.notify_all();
@@ -283,12 +285,12 @@ void gcom::socket::transmit_ready_packets()
             payload_len = stream_itr->second.buff.get_packet(hdr.seq, payload, &(hdr.head), &(hdr.tail));
 
             // 登録されているノードにパケットを送信する
-            for (auto to_itr = cluster.begin();
-                to_itr != cluster.end();
-                to_itr++)
+            for (auto dest = cluster.begin(); dest != cluster.end(); dest++)
             {
-                output_packet(&hdr, payload, payload_len, *to_itr);
+                output_packet(&hdr, payload, payload_len, *dest);
             }
+
+            stream_itr->second.buff.register_transmit_packets(hdr.seq);
         }
     }
 
@@ -321,7 +323,9 @@ void gcom::socket::output_packet(const header* hdr, const void *payload, size_t 
             "output, flag:%d, streamid:%" PRIu32 ", seq:%" PRIu32 ", head:%" PRIu32 ", tail:%" PRIu32 ", %s\n",
             hdr->flag, hdr->streamid, hdr->seq, hdr->head, hdr->tail, (char*)payload);
 #ifdef OUTPUT_PACKET_LOG
-    fprintf(stderr, "%s:%d output_packet(): output_len:%ld\n", __FILE__, __LINE__, output_len);
+    fprintf(stderr,
+            "output, flag:%d, streamid:%" PRIu32 ", seq:%" PRIu32 ", head:%" PRIu32 ", tail:%" PRIu32 "\n",
+            hdr->flag, hdr->streamid, hdr->seq, hdr->head, hdr->tail);
 #endif
 }
 
@@ -354,8 +358,8 @@ std::pair<size_t, gcom::endpoint> gcom::socket::input_packet(header* hdr, void *
         hdr->flag, hdr->streamid, hdr->seq, hdr->head, hdr->tail, (char*)payload);
 #ifdef OUTPUT_PACKET_LOG
     fprintf(stderr,
-            "%s:%d input_packet(): input_len:%ld hdr.flag:%ld\n",
-            __FILE__, __LINE__, input_len, hdr->flag);
+            "input, flag:%d, streamid:%" PRIu32 ", seq:%" PRIu32 ", head:%" PRIu32 ", tail:%" PRIu32 "\n",
+            hdr->flag, hdr->streamid, hdr->seq, hdr->head, hdr->tail);
 #endif
 
     return std::make_pair(payload_len, from);

@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <thread>
+#include <chrono>
 
 // <id> <self port> <n1 ipaddr> <n1 port> <n1 is recovery> ...
 
@@ -41,13 +43,19 @@ int main(int argc, char *argv[]) {
 
     // テスト本体
     if (id == 0) { // 送信ノード
-        char msg[] = "abcedfg";
-        sock.send_all(msg, strlen(msg));
+        for (int i = 0; i < 100; i++) {
+            char msg[100] = "abcedfg";
+            sock.async_send_all(msg, strlen(msg));
+            std::cout << i << std::endl;
+        }
+        // std::this_thread::sleep_for(std::chrono::seconds(5));
     } else { // 受信ノード
         char msg[10];
         gcom::endpoint ep;
-        sock.recv_from(msg, &ep);
-        std::cout << msg << std::endl;
+        for (int i = 0; i < 100; i++) {
+            sock.async_recv_from(msg, &ep);
+            std::cout << "recv" << i << msg << std::endl;
+        }
     }
 
     std::cout << "fin" << std::endl;

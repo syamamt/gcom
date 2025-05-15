@@ -20,7 +20,7 @@ namespace gcom
         // 存在する場合、｛先頭インデックス, 合計データ長} も返す
         bool has_ready_packets(uint32_t *idx, uint32_t *len);
 
-        // 送信処理が開始されたインデックスを登録する
+        // 送信処理が開始された最新のパケットの先頭インデックスを登録する
         void register_transmit_packets(uint32_t idx);
 
         // 空いているバッファサイズを取得する

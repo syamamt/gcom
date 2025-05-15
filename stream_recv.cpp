@@ -3,52 +3,48 @@
 void gcom::stream_recv::insert_packet(unsigned char *payload, uint32_t len, uint32_t idx, uint32_t head, uint32_t tail)
 {
     // のちに挿入されるインデックスまでバッファの領域を確保する
-    if (tail > buff.get_write_idx())
+    if (tail + 1 > buff.get_write_idx())
     {
-        buff.push_empty(tail - buff.get_write_idx());
+        buff.push_empty(tail + 1 - buff.get_write_idx());
     }
 
     // バッファに該当パケットを格納する
     buff.set(idx, payload, len);
 
     // infoに該当パケット情報を追加する
-    auto result = info.emplace(idx, packet_entry(len, head, tail));
-    std::cout << "insert packet() emplace: " << result.second << std::endl;
-    if (result.second)
-    {
-        std::cout << "len: " << result.first->second.payload_size << std::endl;
-        std::cout << "head: " << result.first->second.head << std::endl;
-        std::cout << "tail: " << result.first->second.tail << std::endl;
-    }
+    info.emplace(idx, packet_entry(len, head, tail));
 
     // 新しいデータを挿入したため更新する
-    register_next_idx();
+    register_next_recv_packet_idx();
 
     // zombie index未満の位置に格納されていたパケット情報をinfoから削除する
-    auto itr = info.begin();
-    while (itr != info.end())
+    auto packet = info.begin();
+    while (packet != info.end())
     {
-        if (buff.get_zombie_idx() <= itr->first)
+        if (buff.get_zombie_idx() <= packet->first)
         {
             break;
         }
-        itr = info.erase(itr);
+
+        // ゾンビインデックスより小さいインデックスは無効になる
+        packet = info.erase(packet);
     }
 }
 
 uint32_t gcom::stream_recv::try_pop_packets(unsigned char *data)
 {
-    uint32_t read_idx, tail;
+    uint32_t head = buff.get_read_idx();
 
-    read_idx = buff.get_read_idx();
-    tail = info.at(read_idx).tail;
+    auto packet = info.find(head);
+    if (packet == info.end()) {
+        return 0;
+    }
+    uint32_t tail = packet->second.tail;
 
-    // std::cout << "next_idx: " << next_idx << std::endl;
-
-    if (next_idx  > tail)
+    if (next_recv_packet_idx  > tail)
     {
-        uint32_t len = tail - read_idx;
-        buff.get(read_idx, data, len);
+        uint32_t len = tail + 1 - head;
+        buff.get(head, data, len);
         buff.pop(len);
         return len;
     }
@@ -58,14 +54,14 @@ uint32_t gcom::stream_recv::try_pop_packets(unsigned char *data)
     }
 }
 
-void gcom::stream_recv::register_next_idx()
+void gcom::stream_recv::register_next_recv_packet_idx()
 {
-    auto itr = info.find(next_idx);
-    while (itr != info.end())
+    auto packet = info.find(next_recv_packet_idx);
+    while (packet != info.end())
     {
-        if (next_idx == itr->first)
+        if (next_recv_packet_idx == packet->first)
         {
-            next_idx += itr->second.payload_size;
+            next_recv_packet_idx += packet->second.payload_size;
         }
         else
         {

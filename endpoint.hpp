@@ -16,7 +16,10 @@ namespace gcom
 
         bool operator<(const endpoint& other) const
         {
-            return ipaddr < other.ipaddr && port < other.port;
+            if (ipaddr != other.ipaddr)
+                return ipaddr < other.ipaddr;
+            else
+                return port < other.port;
         }
 
         const std::string& get_ipaddr() const { return ipaddr; }

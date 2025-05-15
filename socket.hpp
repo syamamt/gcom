@@ -49,8 +49,8 @@ namespace gcom
     };
 
     static const int max_epoll_events = 16;
-    static const int epoll_wait_timeout = 1; // [ms]
-    static const int interval_for_querying_recv_buffer = 1; // [ms]
+    static const int epoll_wait_timeout = 0; // [ms]
+    static const int interval_for_querying_recv_buffer = 0; // [ms]
     static const int num_unicast_streams = NUM_UNICAST_STREAMS; // 各送信者のユニキャスト多重ストリーム数
     static const int num_multicast_streams = NUM_MULTICAST_STREAMS; // 各送信者のマルチキャスト多重ストリーム数
     static const int stream_buffer_size = STREAM_BUFFER_SIZE; // [bytes]
@@ -67,10 +67,10 @@ namespace gcom
         // void send_to(const void *buf, size_t len, endpoint& dest);
 
         // クラスタ内の全ノードにデータを送信する
-        void send_all(const void *buf, size_t len);
+        void async_send_all(const void *buf, size_t len);
 
         // クラスタ内の指定したノードにデータを受信する
-        uint32_t recv_from(void *buf, endpoint *from);
+        uint32_t async_recv_from(void *buf, endpoint *from);
 
         // クラスタにノードを登録する（各ノードがそれぞれ管理）
         // 登録されていないノードからのデータ受信、ノードへのデータ送信は無視される

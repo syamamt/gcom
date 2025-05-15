@@ -18,13 +18,14 @@ namespace gcom
             body = new unsigned char[size];
         }
 
-        // 指定したサイズ分だけ領域を確保し、そこデータを書き込む
+        // 指定したサイズ分だけ領域を確保し、データを書き込む
         // 書き込んだ先頭のインデックス（直前のWrite Index）を返す
         T push(unsigned char *data, T len)
         {
             T offset;
             T prev_write_idx;
         
+            // 書き込み容量不足の場合
             if (len > size - (write_idx - read_idx))
             {
                 throw std::exception();
@@ -45,9 +46,9 @@ namespace gcom
             prev_write_idx = write_idx;
             write_idx += len;
         
+            // ゾンビインデックスの更新
             if (write_idx - zombie_idx > size)
             {
-                // calc zombie index
                 zombie_idx = write_idx - size;
             }
         
@@ -59,6 +60,7 @@ namespace gcom
         {
             T prev_write_idx;
         
+            // 書き込み容量不足の場合
             if (len > size - (write_idx - read_idx))
             {
                 throw std::exception();
@@ -67,9 +69,9 @@ namespace gcom
             prev_write_idx = write_idx;
             write_idx += len;
         
+            // ゾンビインデックスの更新
             if (write_idx - zombie_idx > size)
             {
-                // calc zombie index
                 zombie_idx = write_idx - size;
             }
         
@@ -80,6 +82,7 @@ namespace gcom
         // 最も小さい有効なインデックス（新しいRead Index）を返す
         T pop(T len)
         {
+            // 指定サイズのデータが格納されていない場合
             if (len > write_idx - read_idx)
             {
                 throw std::exception();
@@ -89,13 +92,14 @@ namespace gcom
             return read_idx;
         }
 
-        // 指定したインデックスにデータを書き込む
+        // 確保された領域内の指定したインデックスにデータを書き込む
         // 指定されたインデックスの領域が有効でない場合、何もしない
         void set(T idx, unsigned char *data, T len)
         {
             T offset;
         
-            if (idx < read_idx || idx + len > write_idx)
+            // 指定したインデックスが無効な場合
+            if (idx < read_idx || idx + len - 1 > write_idx)
             {
                 throw std::exception();
             }
@@ -118,7 +122,7 @@ namespace gcom
         {
             T offset;
         
-            if (idx < zombie_idx || idx > write_idx - len)
+            if (idx < zombie_idx || idx + len - 1 > write_idx)
             {
                 throw std::exception();
             }
@@ -160,13 +164,16 @@ namespace gcom
         // バッファサイズ
         T size;
 
-        // 
+        // 新しいデータが書き込まれるインデックス
+        // write_idx - 1まで書き込まれている
         T write_idx;
 
-        //
+        // 次のデータを読み込むインデックス
         T read_idx;
 
-        //
+        // 有効な古いデータが格納されているインデックス
+        // zombie_idx ~ read_idxの範囲にあるデータはゾンビインデックスとする
+        // ゾンビインデックスはバッファから削除されたが読み込み可能なデータを示す
         T zombie_idx;
     };
 
