@@ -1,5 +1,0 @@
-application:
-  receivers: 3
-network:
-  loss: 5 # [%]
-  delay: 10 # [ms]
