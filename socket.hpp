@@ -63,6 +63,13 @@ namespace gcom
         socket(uint16_t port);
         ~socket();
 
+        // バックグラウンドスレッドを起動する
+        // 呼出後、送受信関数を受け付けられる
+        void open();
+
+        // バックグラウンドスレッドを終了する
+        void close();
+
         // // destで指定した宛先にデータを送信する
         // void send_to(const void *buf, size_t len, endpoint& dest);
 

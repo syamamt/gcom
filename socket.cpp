@@ -28,7 +28,18 @@ gcom::socket::socket(uint16_t port)
 
     // epollインスタンスにUDPソケットを登録する
     register_epoll_event(sockfd);
+}
 
+gcom::socket::~socket()
+{
+    close();
+
+    ::close(epollfd);
+    ::close(sockfd); 
+}
+
+gcom::socket::open()
+{
     // マルチキャストstream idを生成し、それぞれの送信バッファを作成する
     for (int stream_cnt = 0; stream_cnt < num_multicast_streams; stream_cnt++)
     {
@@ -50,7 +61,7 @@ gcom::socket::socket(uint16_t port)
     bgthread = std::thread([this]{ background(); });
 }
 
-gcom::socket::~socket()
+gcom::socket::close()
 {
     // フラグを停止中に設定する
     system_state.clear();
@@ -59,10 +70,7 @@ gcom::socket::~socket()
     if (bgthread.joinable())
     {
         bgthread.join();
-    }
-
-    ::close(epollfd);
-    ::close(sockfd);
+    }   
 }
 
 // void gcom::socket::send_to(const void *buf, size_t len, endpoint& dest)

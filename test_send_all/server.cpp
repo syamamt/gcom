@@ -41,6 +41,8 @@ int main(int argc, char *argv[]) {
                   << ", Is Recovery Node = " << (n.is_recovery() ? "true" : "false") << std::endl;
     }
 
+    sock.open();
+
     // テスト本体
     if (id == 0) { // 送信ノード
         for (int i = 0; i < 100; i++) {
@@ -57,6 +59,8 @@ int main(int argc, char *argv[]) {
             std::cout << "recv" << i << msg << std::endl;
         }
     }
+
+    sock.close();
 
     std::cout << "fin" << std::endl;
 
