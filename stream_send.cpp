@@ -13,7 +13,6 @@ void gcom::stream_send::push_packets(unsigned char *data, uint32_t len, uint32_t
     {
         uint32_t payload_size = std::min(max_payload_size, head + len - idx);
         buff.set(idx, data + (idx - head), payload_size);
-        fprintf(stdout, "insert%" PRIu32 "\n", idx);
         info.emplace(idx, packet_entry(payload_size, head, tail));
         idx += payload_size;
     }

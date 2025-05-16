@@ -38,7 +38,7 @@ gcom::socket::~socket()
     ::close(sockfd); 
 }
 
-gcom::socket::open()
+void gcom::socket::open()
 {
     // マルチキャストstream idを生成し、それぞれの送信バッファを作成する
     for (int stream_cnt = 0; stream_cnt < num_multicast_streams; stream_cnt++)
@@ -61,7 +61,7 @@ gcom::socket::open()
     bgthread = std::thread([this]{ background(); });
 }
 
-gcom::socket::close()
+void gcom::socket::close()
 {
     // フラグを停止中に設定する
     system_state.clear();
@@ -327,9 +327,6 @@ void gcom::socket::output_packet(const header* hdr, const void *payload, size_t 
         throw std::exception();
     }
 
-    fprintf(stderr,
-            "output, flag:%d, streamid:%" PRIu32 ", seq:%" PRIu32 ", head:%" PRIu32 ", tail:%" PRIu32 ", %s\n",
-            hdr->flag, hdr->streamid, hdr->seq, hdr->head, hdr->tail, (char*)payload);
 #ifdef OUTPUT_PACKET_LOG
     fprintf(stderr,
             "output, flag:%d, streamid:%" PRIu32 ", seq:%" PRIu32 ", head:%" PRIu32 ", tail:%" PRIu32 "\n",
@@ -361,9 +358,6 @@ std::pair<size_t, gcom::endpoint> gcom::socket::input_packet(header* hdr, void *
 
     endpoint from(inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), false);
 
-    fprintf(stderr,
-        "input, flag:%d, streamid:%" PRIu32 ", seq:%" PRIu32 ", head:%" PRIu32 ", tail:%" PRIu32 ", %s\n",
-        hdr->flag, hdr->streamid, hdr->seq, hdr->head, hdr->tail, (char*)payload);
 #ifdef OUTPUT_PACKET_LOG
     fprintf(stderr,
             "input, flag:%d, streamid:%" PRIu32 ", seq:%" PRIu32 ", head:%" PRIu32 ", tail:%" PRIu32 "\n",
