@@ -2,6 +2,7 @@
 
 #include <sys/timerfd.h>
 #include <unistd.h>
+#include <map>
 
 namespace gcom
 {
@@ -11,12 +12,21 @@ namespace gcom
         timeout_manager();
         ~timeout_manager();
 
-        int get_fd()
-        {
-            return tfd;
-        }
+        int add(uint32_t streamid);
+        uint32_t get_streamid(int tfd);
     private:
-        int tfd;
+        std::map<int, uint32_t> tfds; // tfd: streamid
     };
+
+    int timeout_manager::add(uint32_t streamid)
+    {
+        int tfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+        tfds.insert(tfd, streamid);
+        return tfd;
+    }
     
-} // namespace gcom
+    uint32_t timeout_manager::get_streamid(int tfd)
+    {
+        return tfds.at(tfd);
+    }
+}
